@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base dark background */
+    --background: 235 31% 9%;
+    --foreground: 0 0% 98%;
+
+    /* Card and popover styles */
+    --card: 235 25% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 235 25% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Primary orange theme */
+    --primary: 15 100% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary teal theme */
+    --secondary: 173 70% 60%;
+    --secondary-foreground: 235 31% 9%;
+
+    /* Muted elements */
+    --muted: 235 20% 20%;
+    --muted-foreground: 0 0% 65%;
+
+    /* Accent elements */
+    --accent: 235 20% 18%;
+    --accent-foreground: 0 0% 98%;
+
+    /* Destructive/error colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success color */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning color */
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 98%;
+
+    /* Borders and inputs */
+    --border: 235 20% 25%;
+    --input: 235 20% 18%;
+    --ring: 15 100% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(15 100% 60%), hsl(173 70% 60%));
+    --gradient-subtle: linear-gradient(180deg, hsl(235 25% 12%), hsl(235 20% 10%));
+
+    /* Shadows */
+    --shadow-primary: 0 10px 30px -10px hsl(15 100% 60% / 0.3);
+    --shadow-secondary: 0 10px 30px -10px hsl(173 70% 60% / 0.3);
+    --shadow-glow: 0 0 40px hsl(15 100% 60% / 0.4);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Dark mode - same as light since we're using dark theme */
+  .dark {
+    --background: 235 31% 9%;
+    --foreground: 0 0% 98%;
+
+    --card: 235 25% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 235 25% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 15 100% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 173 70% 60%;
+    --secondary-foreground: 235 31% 9%;
+
+    --muted: 235 20% 20%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 235 20% 18%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 98%;
+
+    --border: 235 20% 25%;
+    --input: 235 20% 18%;
+    --ring: 15 100% 60%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    background: linear-gradient(135deg, hsl(235 31% 9%) 0%, hsl(235 25% 12%) 100%);
+    min-height: 100vh;
+  }
+
+  /* Custom animations */
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(15 100% 60% / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(15 100% 60% / 0.5);
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .bridge-card {
+    @apply bg-card border border-border rounded-xl p-6 shadow-lg backdrop-blur-sm;
+    background: linear-gradient(135deg, hsl(235 25% 12% / 0.8) 0%, hsl(235 20% 10% / 0.9) 100%);
+  }
+
+  .status-indicator {
+    @apply inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold;
+  }
+
+  .status-pending {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .status-processing {
+    @apply bg-warning text-warning-foreground animate-pulse;
+  }
+
+  .status-completed {
+    @apply bg-success text-success-foreground;
+  }
+
+  .status-error {
+    @apply bg-destructive text-destructive-foreground;
+  }
+}

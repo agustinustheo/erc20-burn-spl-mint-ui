@@ -1,0 +1,183 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production builds
+dist/
+dist-ssr/
+build/
+
+# Testing
+coverage/
+.nyc_output
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Local development
+*.local
+.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.production
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static
+
+# Web3/Blockchain specific
+# Private keys and wallet files
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig*.json
+!.eslintrc.json
+!.eslintrc.*
+!components.json
+
+# Wallet and private key files
+wallet.json
+private.key
+*.key
+*.pem
+
+# Contract artifacts (Hardhat, Truffle, Foundry)
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# ABI files
+*.abi
+
+# Testing coverage (blockchain specific)
+coverage.json
+
+# Linter cache
+.cspell/
+
+# IDE specific
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# Vite specific
+.vite/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Bun lockfile (if using Bun)
+bun.lockb
+
+# Optional history file for history npm package
+.history
+
+# Temporary build files
+*.tmp
+*.bak
+*.backup
