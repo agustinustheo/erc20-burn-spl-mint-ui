@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { useMigrationStore } from '@/store/bridgeStore';
-import { MigrationFormData, MigrationRequest, CONFIG, TokenMigrationStatus } from '@/types/bridge';
+import {
+  MigrationFormData,
+  MigrationRequest,
+  CONFIG,
+} from '@/types/bridge';
 import { migrationApi, generateMigrationId, formatTokenAmount } from '@/services/bridgeApi';
 import { MigrationForm } from './BridgeForm';
 import { BridgeStatus } from './BridgeStatus';
@@ -17,6 +21,12 @@ export const TokenBridge = () => {
     transactionData,
     vestingData,
     migrationId,
+    statusMessage,
+    isPolling,
+    vestingProgress,
+    vestedAmount,
+    remainingAmount,
+    daysRemaining,
     error,
     setFormData,
     setStep,
@@ -26,14 +36,23 @@ export const TokenBridge = () => {
     setVestingData,
     setMigrationId,
     setError,
+    startMigrationPolling,
+    stopMigrationPolling,
     reset,
   } = useMigrationStore();
 
   const { toast } = useToast();
 
-  const handleFormSubmit = async (data: MigrationFormData) => {
-    let errorMessage: string | undefined;
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (isPolling) {
+        stopMigrationPolling();
+      }
+    };
+  }, [isPolling, stopMigrationPolling]);
 
+  const handleFormSubmit = async (data: MigrationFormData) => {
     try {
       setFormData(data);
       setStep('processing');
@@ -55,59 +74,45 @@ export const TokenBridge = () => {
       // Submit migration request
       const response = await migrationApi.submitMigration(request);
 
-      if (!response.success) {
-        throw new Error(response.error || 'Migration request failed');
+      // Validate response has required fields instead of checking success field
+      if (!response.migrationId || !response.status) {
+        throw new Error(response.error || 'Invalid migration response received');
       }
 
-      // Update transaction data
-      setTransactionData(response.burnTransaction);
+      // Show success message
+      toast({
+        title: 'Migration Initiated',
+        description: 'Your token migration has been started successfully. We\'ll track the progress for you.',
+      });
 
       // Start polling for migration status
-      await pollMigrationStatus(migrationId);
+      startMigrationPolling(migrationId);
 
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
 
-      // Check if this is a burn success with database/vesting error
-      const isBurnSuccessWithDbError = errorMessage.includes('Migration failed');
+      // Determine error type for better handling
+      let errorType: 'network' | 'validation' | 'insufficient' | 'transaction' | 'vesting';
+      let retryable = true;
 
-      if (isBurnSuccessWithDbError) {
-        // The burn likely succeeded on blockchain but backend couldn't store the record
-        setTransactionData({
-          hash: 'pending-verification',
-          status: 'completed',
-          explorerUrl: CONFIG.baseExplorerUrl,
-        });
-
-        setStep('completed');
-        setStatus('completed');
-        setLoading(false);
-
-        toast({
-          title: 'Burn Successful! 🔥',
-          description: 'Your tokens have been burned successfully. Processing vesting...',
-          variant: 'default',
-        });
-
-        // After 10 seconds, show vesting error
-        setTimeout(() => {
-          toast({
-            title: 'Vesting Setup Failed',
-            description: 'Token burn was successful, but vesting setup encountered an issue.',
-            variant: 'destructive',
-          });
-        }, 10000);
-
-        return;
+      if (errorMessage.includes('Insufficient token balance')) {
+        errorType = 'insufficient';
+        retryable = false;
+      } else if (errorMessage.includes('Invalid') || errorMessage.includes('validation')) {
+        errorType = 'validation';
+        retryable = false;
+      } else if (errorMessage.includes('vesting') || errorMessage.includes('Vesting')) {
+        errorType = 'vesting';
+      } else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+        errorType = 'network';
+      } else {
+        errorType = 'transaction';
       }
-
-      // Handle other errors normally
-      const errorType = errorMessage.includes('Insufficient token balance') ? 'insufficient' : 'transaction';
 
       setError({
         type: errorType,
         message: errorMessage,
-        retryable: errorType !== 'insufficient',
+        retryable,
       });
 
       setStep('error');
@@ -119,60 +124,8 @@ export const TokenBridge = () => {
         variant: 'destructive',
       });
     } finally {
-      if (!errorMessage?.includes('Migration failed')) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  };
-
-  const pollMigrationStatus = async (migrationId: string) => {
-    // Poll the migration status until completion
-    const maxAttempts = 20;
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-      const status = await migrationApi.getStatus(migrationId);
-
-      switch (status.status) {
-        case TokenMigrationStatus.PENDING_BURN:
-          setStatus('pending_burn');
-          break;
-
-        case TokenMigrationStatus.BURN_CONFIRMED:
-          setStatus('burn_confirmed');
-          toast({
-            title: 'Tokens Burned',
-            description: 'Your tokens have been successfully burned on Base network.',
-          });
-          break;
-
-        case TokenMigrationStatus.VESTING_STARTED:
-          setStatus('vesting_started');
-          break;
-
-        case TokenMigrationStatus.COMPLETED:
-          if (status.vesting) {
-            setVestingData(status.vesting);
-          }
-          setStatus('completed');
-          setStep('completed');
-
-          toast({
-            title: 'Migration Completed!',
-            description: 'Your vesting contract has been created on Solana.',
-          });
-          return;
-
-        case TokenMigrationStatus.BURN_FAILED:
-        case TokenMigrationStatus.VESTING_FAILED:
-          throw new Error(`Migration failed: ${status.error || 'Unknown error'}`);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      attempts++;
-    }
-
-    throw new Error('Migration timed out');
   };
 
   const handleRetry = () => {
@@ -181,65 +134,50 @@ export const TokenBridge = () => {
     }
   };
 
-  const handleNewMigration = () => {
+  const handleReset = () => {
+    stopMigrationPolling();
     reset();
   };
 
-  // Render appropriate component based on current step
-  const renderCurrentStep = () => {
-    switch (step) {
-      case 'form':
-        return (
-          <MigrationForm
-            onSubmit={handleFormSubmit}
-            loading={loading}
-          />
-        );
+  // Render based on current step
+  switch (step) {
+    case 'form':
+      return <MigrationForm onSubmit={handleFormSubmit} />;
 
-      case 'processing':
-        return (
-          <BridgeStatus
-            status={status}
-            formData={formData!}
-            transactionData={transactionData}
-            onRetry={handleRetry}
-          />
-        );
+    case 'processing':
+      return (
+        <BridgeStatus
+          status={status}
+          transactionData={transactionData}
+          vestingData={vestingData}
+          statusMessage={statusMessage}
+          isPolling={isPolling}
+          vestingProgress={vestingProgress}
+          vestedAmount={vestedAmount}
+          remainingAmount={remainingAmount}
+          daysRemaining={daysRemaining}
+        />
+      );
 
-      case 'completed':
-        return (
-          <BridgeCompleted
-            formData={formData!}
-            transactionData={transactionData!}
-            vestingData={vestingData!}
-            onNewBridge={handleNewMigration}
-          />
-        );
+    case 'completed':
+      return (
+        <BridgeCompleted
+          transactionData={transactionData}
+          vestingData={vestingData}
+          onReset={handleReset}
+        />
+      );
 
-      case 'error':
-        return (
-          <BridgeError
-            error={error!}
-            onRetry={error?.retryable ? handleRetry : undefined}
-            onBack={handleNewMigration}
-          />
-        );
+    case 'error':
+      return (
+        <BridgeError
+          error={error}
+          onRetry={handleRetry}
+          onReset={handleReset}
+        />
+      );
 
-      default:
-        return (
-          <MigrationForm
-            onSubmit={handleFormSubmit}
-            loading={loading}
-          />
-        );
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        {renderCurrentStep()}
-      </div>
-    </div>
-  );
+    default:
+      return <MigrationForm onSubmit={handleFormSubmit} />;
+  }
 };

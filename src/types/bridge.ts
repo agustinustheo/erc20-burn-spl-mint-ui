@@ -29,24 +29,55 @@ export interface MigrationVestingData {
 }
 
 export interface MigrationResponse {
-  success: boolean;
   migrationId: string;
-  burnTransaction: MigrationTransactionData;
+  accountId: string;
+  status: TokenMigrationStatus;
+  tokenAddress: string;
+  amount: string;
+  chainId: number;
+  solanaRecipientAddress: string;
+  burnTransactionHash?: string;
+  burnBlockNumber?: number;
+  vestingContractAddress?: string;
+  solanaTransactionHash?: string;
+  vestingStartDate?: string;
+  vestingEndDate?: string;
+  dailyReleaseAmount?: string;
+  createdAt: string;
+  updatedAt: string;
+  burnTransaction?: MigrationTransactionData;
   vesting?: MigrationVestingData;
   error?: string;
 }
 
 export interface MigrationStatusResponse {
   migrationId: string;
+  accountId: string;
   status: TokenMigrationStatus;
+  tokenAddress: string;
+  amount: string;
+  chainId: number;
+  solanaRecipientAddress: string;
+  burnTransactionHash?: string;
+  burnBlockNumber?: number;
+  vestingContractAddress?: string;
+  solanaTransactionHash?: string;
+  vestingStartDate?: string;
+  vestingEndDate?: string;
+  dailyReleaseAmount?: string;
+  createdAt: string;
+  updatedAt: string;
   burnTransaction?: MigrationTransactionData;
   vesting?: MigrationVestingData;
   error?: string;
-  progress?: {
-    currentStep: number;
-    totalSteps: number;
-    message: string;
-  };
+}
+
+export interface MigrationProgressResponse {
+  status: TokenMigrationStatus;
+  vestingProgress: number;
+  vestedAmount: string;
+  remainingAmount: string;
+  daysRemaining: number;
 }
 
 export type MigrationStep = 'form' | 'processing' | 'completed' | 'error';
@@ -80,12 +111,20 @@ export const POPULAR_TOKENS = {
   AIKA: import.meta.env.VITE_AIKA_TOKEN_ADDRESS || '0x0000000000000000000000000000000000000000',
 } as const;
 
+// Solana devnet USDC configuration
+export const SOLANA_TOKENS = {
+  USDC_DEVNET: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+} as const;
+
 export const CONFIG = {
-  apiBaseUrl: import.meta.env.VITE_API_URL || 'https://0ebce1a88279.ngrok-free.app',
-  authToken: import.meta.env.VITE_AUTH_TOKEN || '',
+  apiBaseUrl: import.meta.env.VITE_API_URL,
+  authToken: import.meta.env.VITE_AUTH_TOKEN,
   baseChainId: parseInt(import.meta.env.VITE_BASE_CHAIN_ID || '8453'),
   solanaNetwork: import.meta.env.VITE_SOLANA_NETWORK || 'devnet',
   defaultVestingDuration: parseInt(import.meta.env.VITE_DEFAULT_VESTING_DURATION || '90'),
   baseExplorerUrl: import.meta.env.VITE_BASE_EXPLORER_URL || 'https://basescan.org',
   solanaExplorerUrl: import.meta.env.VITE_SOLANA_EXPLORER_URL || 'https://explorer.solana.com',
+  statusPollingInterval: parseInt(import.meta.env.VITE_STATUS_POLLING_INTERVAL || '30000'), // 30 seconds as per requirement
+  maxPollingAttempts: parseInt(import.meta.env.VITE_MAX_POLLING_ATTEMPTS || '120'), // 60 minutes max (120 * 30s = 3600s)
+  testAmount: import.meta.env.VITE_TEST_AMOUNT || '100', // 100 USDC for testing
 } as const;

@@ -5,12 +5,15 @@ import { ErrorDisplay } from '@/types/bridge';
 import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 
 interface BridgeErrorProps {
-  error: ErrorDisplay;
+  error: ErrorDisplay | null;
   onRetry?: () => void;
-  onBack: () => void;
+  onReset: () => void;
 }
 
-export const BridgeError = ({ error, onRetry, onBack }: BridgeErrorProps) => {
+export const BridgeError = ({ error, onRetry, onReset }: BridgeErrorProps) => {
+  if (!error) {
+    return null;
+  }
   const getErrorIcon = () => {
     switch (error.type) {
       case 'network':
@@ -97,7 +100,7 @@ export const BridgeError = ({ error, onRetry, onBack }: BridgeErrorProps) => {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
-            onClick={onBack}
+            onClick={onReset}
             variant="outline"
             className="flex-1"
           >

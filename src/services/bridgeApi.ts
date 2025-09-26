@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { MigrationRequest, MigrationResponse, MigrationStatusResponse, CONFIG } from '@/types/bridge';
+import { MigrationRequest, MigrationResponse, MigrationStatusResponse, MigrationProgressResponse, CONFIG } from '@/types/bridge';
 
 const api = axios.create({
   baseURL: CONFIG.apiBaseUrl,
@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Authorization': CONFIG.authToken ? `Bearer ${CONFIG.authToken}` : '',
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
@@ -49,7 +50,7 @@ export const migrationApi = {
     }
   },
 
-  async getProgress(migrationId: string): Promise<MigrationStatusResponse> {
+  async getProgress(migrationId: string): Promise<MigrationProgressResponse> {
     try {
       const response = await api.get(`/v2/token-migration/progress/${migrationId}`);
       return response.data;
@@ -59,6 +60,53 @@ export const migrationApi = {
       }
       throw error;
     }
+  },
+
+  async pollMigrationStatus(
+    migrationId: string,
+    onStatusUpdate: (status: MigrationStatusResponse) => void,
+    onError: (error: Error) => void
+  ): Promise<void> {
+    if (!migrationId) {
+      onError(new Error('Invalid migration ID provided for polling'));
+      return;
+    }
+    
+    let attempts = 0;
+    const maxAttempts = CONFIG.maxPollingAttempts;
+    const interval = CONFIG.statusPollingInterval;
+
+    const poll = async () => {
+      try {
+        attempts++;
+        const status = await this.getStatus(migrationId);
+        onStatusUpdate(status);
+
+        // Continue polling if not in final state
+        if (!this.isFinalStatus(status.status) && attempts < maxAttempts) {
+          setTimeout(poll, interval);
+        } else if (attempts >= maxAttempts) {
+          onError(new Error('Migration is taking longer than expected. Please check status manually or wait for completion.'));
+        }
+      } catch (error) {
+        // On API errors, continue polling instead of failing immediately
+        if (attempts < maxAttempts) {
+          setTimeout(poll, interval);
+        } else {
+          onError(new Error('Unable to check migration status. Please verify manually.'));
+        }
+      }
+    };
+
+    // Start polling immediately
+    poll();
+  },
+
+  isFinalStatus(status: string): boolean {
+    if (!status) {
+      return false;
+    }
+    return ['vesting_started', 'completed'].includes(status);
   },
 };
 
@@ -70,8 +118,12 @@ export const formatTokenAmount = (amount: string, decimals: number = 18): string
   const num = parseFloat(amount);
   if (isNaN(num) || num <= 0) return '0';
 
-  // Return the amount as string with 18 decimals as required by the new API
-  return (num * Math.pow(10, decimals)).toString();
+  // Convert to integer to avoid floating point precision issues
+  const integerAmount = Math.floor(num);
+  
+  const bigIntAmount = BigInt(integerAmount);
+  
+  return bigIntAmount.toString();
 };
 
 export const getExplorerUrl = (hash: string, network: 'base' | 'solana'): string => {
