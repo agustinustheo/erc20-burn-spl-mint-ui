@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { BridgeFormData, POPULAR_TOKENS, CONFIG } from '@/types/bridge';
+import { MigrationFormData, POPULAR_TOKENS, CONFIG } from '@/types/bridge';
 import { Flame, ArrowRight } from 'lucide-react';
 
-const bridgeSchema = z.object({
+const migrationSchema = z.object({
   accountId: z.string().min(1, 'Account ID is required'),
   tokenAddress: z.string()
     .min(1, 'Token address is required')
@@ -17,7 +17,7 @@ const bridgeSchema = z.object({
   amount: z.string()
     .min(1, 'Amount is required')
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, 'Amount must be a positive number'),
-  solanaWalletAddress: z.string()
+  solanaRecipientAddress: z.string()
     .min(1, 'Solana wallet address is required')
     .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/, 'Invalid Solana address format'),
   vestingDurationDays: z.number()
@@ -25,19 +25,19 @@ const bridgeSchema = z.object({
     .max(365, 'Duration cannot exceed 365 days'),
 });
 
-interface BridgeFormProps {
-  onSubmit: (data: BridgeFormData) => void;
+interface MigrationFormProps {
+  onSubmit: (data: MigrationFormData) => void;
   loading?: boolean;
 }
 
-export const BridgeForm = ({ onSubmit, loading = false }: BridgeFormProps) => {
-  const form = useForm<BridgeFormData>({
-    resolver: zodResolver(bridgeSchema),
+export const MigrationForm = ({ onSubmit, loading = false }: MigrationFormProps) => {
+  const form = useForm<MigrationFormData>({
+    resolver: zodResolver(migrationSchema),
     defaultValues: {
       accountId: '',
       tokenAddress: '',
       amount: '',
-      solanaWalletAddress: '',
+      solanaRecipientAddress: '',
       vestingDurationDays: CONFIG.defaultVestingDuration,
     },
   });
@@ -52,11 +52,11 @@ export const BridgeForm = ({ onSubmit, loading = false }: BridgeFormProps) => {
         <div className="flex items-center justify-center gap-2 mb-2">
           <Flame className="w-8 h-8 text-primary animate-pulse-glow" />
           <CardTitle className="text-3xl font-bold text-gradient">
-            Token Bridge & Vest
+            Token Migration & Vest
           </CardTitle>
         </div>
         <CardDescription className="text-lg text-muted-foreground">
-          Bridge ERC20 tokens from Base to Solana with automatic vesting
+          Migrate ERC20 tokens from Base to Solana with automatic vesting
         </CardDescription>
       </CardHeader>
 
@@ -142,10 +142,10 @@ export const BridgeForm = ({ onSubmit, loading = false }: BridgeFormProps) => {
 
             <FormField
               control={form.control}
-              name="solanaWalletAddress"
+              name="solanaRecipientAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-foreground font-medium">Solana Wallet Address</FormLabel>
+                  <FormLabel className="text-foreground font-medium">Solana Recipient Address</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Solana wallet address for vesting contract"
@@ -192,7 +192,7 @@ export const BridgeForm = ({ onSubmit, loading = false }: BridgeFormProps) => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Flame className="w-5 h-5" />
-                  Start Bridge Process
+                  Start Migration Process
                   <ArrowRight className="w-5 h-5" />
                 </div>
               )}

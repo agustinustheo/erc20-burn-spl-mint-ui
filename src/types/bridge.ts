@@ -1,25 +1,25 @@
-export interface BridgeFormData {
+export interface MigrationFormData {
   accountId: string;
   tokenAddress: string;
   amount: string;
-  solanaWalletAddress: string;
+  solanaRecipientAddress: string;
   vestingDurationDays: number;
 }
 
-export interface BridgeRequest extends BridgeFormData {
-  bridgeId: string;
+export interface MigrationRequest extends MigrationFormData {
+  migrationId: string;
   chainId: number;
-  startImmediately: boolean;
+  webhookUrl?: string;
 }
 
-export interface TransactionData {
+export interface MigrationTransactionData {
   hash: string;
   blockNumber?: number;
   status: 'pending' | 'confirmed' | 'completed' | 'failed';
   explorerUrl?: string;
 }
 
-export interface VestingData {
+export interface MigrationVestingData {
   contractAddress: string;
   amount: string;
   duration: number;
@@ -28,23 +28,45 @@ export interface VestingData {
   explorerUrl?: string;
 }
 
-export interface BridgeResponse {
+export interface MigrationResponse {
   success: boolean;
-  bridgeId: string;
-  burnTransaction: TransactionData;
-  vesting?: VestingData;
+  migrationId: string;
+  burnTransaction: MigrationTransactionData;
+  vesting?: MigrationVestingData;
   error?: string;
 }
 
-export type BridgeStep = 'form' | 'processing' | 'completed' | 'error';
+export interface MigrationStatusResponse {
+  migrationId: string;
+  status: TokenMigrationStatus;
+  burnTransaction?: MigrationTransactionData;
+  vesting?: MigrationVestingData;
+  error?: string;
+  progress?: {
+    currentStep: number;
+    totalSteps: number;
+    message: string;
+  };
+}
 
-export type BridgeStatus = 
+export type MigrationStep = 'form' | 'processing' | 'completed' | 'error';
+
+export type MigrationStatus =
   | 'idle'
-  | 'burning'
-  | 'burned'
-  | 'vesting'
+  | 'pending_burn'
+  | 'burn_confirmed'
+  | 'vesting_started'
   | 'completed'
   | 'error';
+
+export enum TokenMigrationStatus {
+  PENDING_BURN = 'pending_burn',
+  BURN_CONFIRMED = 'burn_confirmed',
+  BURN_FAILED = 'burn_failed',
+  VESTING_STARTED = 'vesting_started',
+  VESTING_FAILED = 'vesting_failed',
+  COMPLETED = 'completed'
+}
 
 export interface ErrorDisplay {
   type: 'network' | 'validation' | 'insufficient' | 'transaction' | 'vesting';

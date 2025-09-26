@@ -1,34 +1,46 @@
 import { create } from 'zustand';
-import { BridgeFormData, BridgeStep, BridgeStatus, TransactionData, VestingData, ErrorDisplay } from '@/types/bridge';
+import {
+  MigrationFormData,
+  MigrationStep,
+  MigrationStatus,
+  MigrationTransactionData,
+  MigrationVestingData,
+  ErrorDisplay,
+  TokenMigrationStatus
+} from '@/types/bridge';
 
-interface BridgeState {
+interface MigrationState {
   // Current state
-  step: BridgeStep;
-  status: BridgeStatus;
+  step: MigrationStep;
+  status: MigrationStatus;
   loading: boolean;
 
   // Form data
-  formData: BridgeFormData | null;
+  formData: MigrationFormData | null;
 
   // Transaction and vesting data
-  transactionData: TransactionData | null;
-  vestingData: VestingData | null;
+  transactionData: MigrationTransactionData | null;
+  vestingData: MigrationVestingData | null;
+
+  // Migration tracking
+  migrationId: string | null;
 
   // Error handling
   error: ErrorDisplay | null;
 
   // Actions
-  setFormData: (data: BridgeFormData) => void;
-  setStep: (step: BridgeStep) => void;
-  setStatus: (status: BridgeStatus) => void;
+  setFormData: (data: MigrationFormData) => void;
+  setStep: (step: MigrationStep) => void;
+  setStatus: (status: MigrationStatus) => void;
   setLoading: (loading: boolean) => void;
-  setTransactionData: (data: TransactionData) => void;
-  setVestingData: (data: VestingData) => void;
+  setTransactionData: (data: MigrationTransactionData) => void;
+  setVestingData: (data: MigrationVestingData) => void;
+  setMigrationId: (id: string | null) => void;
   setError: (error: ErrorDisplay | null) => void;
   reset: () => void;
 }
 
-export const useBridgeStore = create<BridgeState>((set) => ({
+export const useMigrationStore = create<MigrationState>((set) => ({
   // Initial state
   step: 'form',
   status: 'idle',
@@ -36,6 +48,7 @@ export const useBridgeStore = create<BridgeState>((set) => ({
   formData: null,
   transactionData: null,
   vestingData: null,
+  migrationId: null,
   error: null,
 
   // Actions
@@ -45,6 +58,7 @@ export const useBridgeStore = create<BridgeState>((set) => ({
   setLoading: (loading) => set({ loading }),
   setTransactionData: (data) => set({ transactionData: data }),
   setVestingData: (data) => set({ vestingData: data }),
+  setMigrationId: (id) => set({ migrationId: id }),
   setError: (error) => set({ error }),
   reset: () => set({
     step: 'form',
@@ -53,6 +67,7 @@ export const useBridgeStore = create<BridgeState>((set) => ({
     formData: null,
     transactionData: null,
     vestingData: null,
+    migrationId: null,
     error: null,
   }),
 }));

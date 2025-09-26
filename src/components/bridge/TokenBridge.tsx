@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { useBridgeStore } from '@/store/bridgeStore';
-import { BridgeFormData, BridgeRequest, CONFIG } from '@/types/bridge';
-import { bridgeApi, generateBridgeId, formatTokenAmount } from '@/services/bridgeApi';
-import { BridgeForm } from './BridgeForm';
+import { useMigrationStore } from '@/store/bridgeStore';
+import { MigrationFormData, MigrationRequest, CONFIG, TokenMigrationStatus } from '@/types/bridge';
+import { migrationApi, generateMigrationId, formatTokenAmount } from '@/services/bridgeApi';
+import { MigrationForm } from './BridgeForm';
 import { BridgeStatus } from './BridgeStatus';
 import { BridgeCompleted } from './BridgeCompleted';
 import { BridgeError } from './BridgeError';
@@ -16,6 +16,7 @@ export const TokenBridge = () => {
     formData,
     transactionData,
     vestingData,
+    migrationId,
     error,
     setFormData,
     setStep,
@@ -23,150 +24,155 @@ export const TokenBridge = () => {
     setLoading,
     setTransactionData,
     setVestingData,
+    setMigrationId,
     setError,
     reset,
-  } = useBridgeStore();
+  } = useMigrationStore();
 
   const { toast } = useToast();
 
-  const handleFormSubmit = async (data: BridgeFormData) => {
+  const handleFormSubmit = async (data: MigrationFormData) => {
     let errorMessage: string | undefined;
-    
+
     try {
       setFormData(data);
       setStep('processing');
-      setStatus('burning');
+      setStatus('pending_burn');
       setLoading(true);
       setError(null);
 
-      // Prepare bridge request
-      const request: BridgeRequest = {
+      // Prepare migration request
+      const migrationId = generateMigrationId();
+      setMigrationId(migrationId);
+
+      const request: MigrationRequest = {
         ...data,
-        bridgeId: generateBridgeId(),
+        migrationId,
         chainId: CONFIG.baseChainId,
         amount: formatTokenAmount(data.amount),
-        startImmediately: true,
       };
 
-      // Submit bridge request
-      const response = await bridgeApi.submitBridge(request);
+      // Submit migration request
+      const response = await migrationApi.submitMigration(request);
 
       if (!response.success) {
-        throw new Error(response.error || 'Bridge request failed');
+        throw new Error(response.error || 'Migration request failed');
       }
 
       // Update transaction data
       setTransactionData(response.burnTransaction);
-      
-      // Simulate transaction progression
-      await simulateTransactionProgress(response.bridgeId);
+
+      // Start polling for migration status
+      await pollMigrationStatus(migrationId);
 
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      
+
       // Check if this is a burn success with database/vesting error
-      // Note: These are the transformed error messages from bridgeApi.ts
-      const isBurnSuccessWithDbError = errorMessage.includes('Database error occurred while processing your transaction') || 
-                                      errorMessage.includes('The burn operation encountered an issue') ||
-                                      errorMessage.includes('column "status" of relation "bridges" does not exist');
-      
+      const isBurnSuccessWithDbError = errorMessage.includes('Migration failed');
+
       if (isBurnSuccessWithDbError) {
         // The burn likely succeeded on blockchain but backend couldn't store the record
-        // We don't have access to the actual transaction hash, so we'll show a generic success
-        
-        // Show burn success without specific transaction hash
         setTransactionData({
-          hash: 'pending-verification', // Use a placeholder that indicates verification needed
+          hash: 'pending-verification',
           status: 'completed',
-          explorerUrl: CONFIG.baseExplorerUrl, // Link to general Basescan for user to search
+          explorerUrl: CONFIG.baseExplorerUrl,
         });
-        
+
         setStep('completed');
         setStatus('completed');
         setLoading(false);
-        
+
         toast({
           title: 'Burn Successful! 🔥',
           description: 'Your tokens have been burned successfully. Processing vesting...',
           variant: 'default',
         });
-        
+
         // After 10 seconds, show vesting error
         setTimeout(() => {
           toast({
             title: 'Vesting Setup Failed',
-            description: 'Token burn was successful, but vesting setup encountered an issue. Our team is working on Solana devnet integration.',
+            description: 'Token burn was successful, but vesting setup encountered an issue.',
             variant: 'destructive',
           });
         }, 10000);
-        
+
         return;
       }
-      
+
       // Handle other errors normally
       const errorType = errorMessage.includes('Insufficient token balance') ? 'insufficient' : 'transaction';
-      
+
       setError({
         type: errorType,
         message: errorMessage,
         retryable: errorType !== 'insufficient',
       });
-      
+
       setStep('error');
       setStatus('error');
-      
+
       toast({
-        title: 'Bridge Failed',
+        title: 'Migration Failed',
         description: errorMessage,
         variant: 'destructive',
       });
     } finally {
-      if (!errorMessage?.includes('Failed to store burn record') && 
-          !errorMessage?.includes('column "status" of relation "bridges" does not exist') &&
-          !errorMessage?.includes('Failed to complete burn-to-vest operation')) {
+      if (!errorMessage?.includes('Migration failed')) {
         setLoading(false);
       }
     }
   };
 
-  const simulateTransactionProgress = async (bridgeId: string) => {
-    // In a real app, this would poll the API for status updates
-    // For now, we'll simulate the progression
-    
-    // Step 1: Burning tokens
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setStatus('burned');
-    
-    toast({
-      title: 'Tokens Burned',
-      description: 'Your tokens have been successfully burned on Base network.',
-    });
+  const pollMigrationStatus = async (migrationId: string) => {
+    // Poll the migration status until completion
+    const maxAttempts = 20;
+    let attempts = 0;
 
-    // Step 2: Creating vesting
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setStatus('vesting');
+    while (attempts < maxAttempts) {
+      const status = await migrationApi.getStatus(migrationId);
 
-    // Step 3: Completing vesting
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Simulate successful vesting creation
-    const mockVestingData = {
-      contractAddress: 'Gv7q3K4xGjgP9YsF8nZhE2wR5tBcA6mL9pN3rT8sX1vY',
-      amount: formData?.amount || '0',
-      duration: formData?.vestingDurationDays || 90,
-      startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + (formData?.vestingDurationDays || 90) * 24 * 60 * 60 * 1000).toISOString(),
-      explorerUrl: `${CONFIG.solanaExplorerUrl}/address/Gv7q3K4xGjgP9YsF8nZhE2wR5tBcA6mL9pN3rT8sX1vY?cluster=${CONFIG.solanaNetwork}`,
-    };
+      switch (status.status) {
+        case TokenMigrationStatus.PENDING_BURN:
+          setStatus('pending_burn');
+          break;
 
-    setVestingData(mockVestingData);
-    setStatus('completed');
-    setStep('completed');
+        case TokenMigrationStatus.BURN_CONFIRMED:
+          setStatus('burn_confirmed');
+          toast({
+            title: 'Tokens Burned',
+            description: 'Your tokens have been successfully burned on Base network.',
+          });
+          break;
 
-    toast({
-      title: 'Bridge Completed!',
-      description: 'Your vesting contract has been created on Solana devnet.',
-    });
+        case TokenMigrationStatus.VESTING_STARTED:
+          setStatus('vesting_started');
+          break;
+
+        case TokenMigrationStatus.COMPLETED:
+          if (status.vesting) {
+            setVestingData(status.vesting);
+          }
+          setStatus('completed');
+          setStep('completed');
+
+          toast({
+            title: 'Migration Completed!',
+            description: 'Your vesting contract has been created on Solana.',
+          });
+          return;
+
+        case TokenMigrationStatus.BURN_FAILED:
+        case TokenMigrationStatus.VESTING_FAILED:
+          throw new Error(`Migration failed: ${status.error || 'Unknown error'}`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      attempts++;
+    }
+
+    throw new Error('Migration timed out');
   };
 
   const handleRetry = () => {
@@ -175,7 +181,7 @@ export const TokenBridge = () => {
     }
   };
 
-  const handleNewBridge = () => {
+  const handleNewMigration = () => {
     reset();
   };
 
@@ -184,7 +190,7 @@ export const TokenBridge = () => {
     switch (step) {
       case 'form':
         return (
-          <BridgeForm
+          <MigrationForm
             onSubmit={handleFormSubmit}
             loading={loading}
           />
@@ -206,7 +212,7 @@ export const TokenBridge = () => {
             formData={formData!}
             transactionData={transactionData!}
             vestingData={vestingData!}
-            onNewBridge={handleNewBridge}
+            onNewBridge={handleNewMigration}
           />
         );
 
@@ -215,13 +221,13 @@ export const TokenBridge = () => {
           <BridgeError
             error={error!}
             onRetry={error?.retryable ? handleRetry : undefined}
-            onBack={handleNewBridge}
+            onBack={handleNewMigration}
           />
         );
 
       default:
         return (
-          <BridgeForm
+          <MigrationForm
             onSubmit={handleFormSubmit}
             loading={loading}
           />
