@@ -3,7 +3,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { MigrationFormData, POPULAR_TOKENS, CONFIG } from '@/types/bridge';
@@ -38,7 +37,7 @@ export const MigrationForm = ({ onSubmit, loading = false }: MigrationFormProps)
       tokenAddress: '',
       amount: '',
       solanaRecipientAddress: '',
-      vestingDurationDays: CONFIG.defaultVestingDuration,
+      vestingDurationDays: undefined,
     },
   });
 
@@ -171,7 +170,7 @@ export const MigrationForm = ({ onSubmit, loading = false }: MigrationFormProps)
                       max="365"
                       className="bg-input border-border focus:ring-primary"
                       {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || CONFIG.defaultVestingDuration)}
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />

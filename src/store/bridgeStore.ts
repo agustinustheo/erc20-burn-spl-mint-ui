@@ -173,12 +173,14 @@ export const useMigrationStore = create<MigrationState>((set, get) => ({
 
     const isCompleted = migrationApi.isFinalStatus(response.status);
     
+    const currentState = get();
+
     set({
       currentMigrationStatus: response.status as TokenMigrationStatus,
       statusMessage: statusMessages[response.status] || `Status: ${response.status}`,
       isPolling: !isCompleted,
       step: isCompleted ? 'completed' : 'processing',
-      status: response.status === 'vesting_started' || response.status === 'completed' ? 'completed' : 
+      status: response.status === 'vesting_started' || response.status === 'completed' ? 'completed' :
               (response.status && response.status.includes('failed')) ? 'error' : 'pending_burn',
       transactionData: response.burnTransactionHash ? {
         hash: response.burnTransactionHash,
@@ -188,7 +190,7 @@ export const useMigrationStore = create<MigrationState>((set, get) => ({
       vestingData: response.vestingContractAddress ? {
         contractAddress: response.vestingContractAddress,
         amount: response.amount,
-        duration: 90,
+        duration: currentState.formData?.vestingDurationDays,
         startDate: response.vestingStartDate || response.createdAt,
         endDate: response.vestingEndDate || response.updatedAt
       } : null
