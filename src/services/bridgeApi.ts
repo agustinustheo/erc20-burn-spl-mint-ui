@@ -6,10 +6,22 @@ const api = axios.create({
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': CONFIG.authToken ? `Bearer ${CONFIG.authToken}` : '',
     'ngrok-skip-browser-warning': 'true',
   },
 });
+
+// Function to set auth token dynamically
+export const setApiAuthToken = (token: string | null) => {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+  }
+};
+
+if (CONFIG.authToken) {
+  setApiAuthToken(CONFIG.authToken);
+}
 
 export const migrationApi = {
   async submitMigration(request: MigrationRequest): Promise<MigrationResponse> {
